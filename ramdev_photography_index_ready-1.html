@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ramdev Photography</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f5f5f5;color:#222}
+header{background:#111;color:#fff;padding:18px;text-align:center}
+main{max-width:900px;margin:auto;padding:18px}
+.card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 10px #0001}
+button{border:0;border-radius:10px;padding:11px 15px;background:#111;color:white;margin:5px;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.photo{background:#eee;border-radius:10px;overflow:hidden}
+.photo img{width:100%;display:block}
+.small{color:#666;font-size:13px}
+#gallery{margin-top:15px}
+</style>
+</head>
+<body>
+<header><h2>RAMDEV PHOTOGRAPHY</h2><div>Wedding Photo Gallery</div></header>
+<main>
+<div class="card">
+<h3>Wedding Gallery</h3>
+<p class="small">QR scan करने पर current wedding की photos यहाँ दिखेंगी।</p>
+<div id="status" class="small">Photos load हो रही हैं...</div>
+<div id="gallery" class="grid"></div>
+</div>
+</main>
+<script>
+const SUPABASE_URL="https://wxrwkvlcatryuopvwqjh.supabase.co";
+const BUCKET="Wedding photo";
+const SUPABASE_ANON_KEY="sb_publishable_LSDKQCTKq4pWbFTbNeEPIg_cdDCN7HM";
+const gallery=document.getElementById("gallery");
+const statusBox=document.getElementById("status");
+
+function publicUrl(path){
+ return SUPABASE_URL+"/storage/v1/object/public/"+encodeURIComponent(BUCKET)+"/"+
+ path.split("/").map(encodeURIComponent).join("/");
+}
+async function loadGallery(){
+ if(SUPABASE_ANON_KEY.includes("PASTE_YOUR")){
+  statusBox.textContent="Supabase key अभी जोड़नी बाकी है।"; return;
+ }
+ try{
+  const res=await fetch(SUPABASE_URL+"/storage/v1/object/list/"+encodeURIComponent(BUCKET),{
+   method:"POST",
+   headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json"},
+   body:JSON.stringify({prefix:"",limit:1000,offset:0,sortBy:{column:"name",order:"asc"}})
+  });
+  if(!res.ok) throw new Error();
+  const files=await res.json();
+  const photos=files.filter(x=>x.name && /\.(jpg|jpeg|png|webp)$/i.test(x.name));
+  statusBox.textContent=photos.length+" photo मिलीं।";
+  photos.forEach(file=>{
+   const url=publicUrl(file.name);
+   const d=document.createElement("div"); d.className="photo";
+   d.innerHTML='<img src="'+url+'" alt="Wedding photo" loading="lazy"><div style="padding:8px"><a href="'+url+'" download><button>Download</button></a></div>';
+   gallery.appendChild(d);
+  });
+  if(!photos.length) statusBox.textContent="अभी कोई photo नहीं है।";
+ }catch(e){statusBox.textContent="Photos load नहीं हो पाईं। Supabase key/settings check करें।";}
+}
+loadGallery();
+</script>
+</body>
+</html>
