@@ -1,1 +1,665 @@
+<!doctype html>
+<html lang="hi">
 
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>Ramdev Photography - Upload</title>
+
+<style>
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#222;
+  color:white;
+}
+
+header{
+  background:#111;
+  text-align:center;
+  padding:22px 10px;
+}
+
+header h2{
+  margin:0 0 8px;
+  font-size:21px;
+}
+
+header div{
+  font-size:14px;
+}
+
+main{
+  padding:20px;
+  max-width:650px;
+  margin:auto;
+}
+
+.card{
+  background:#111;
+  padding:25px;
+  border-radius:15px;
+  text-align:center;
+}
+
+.uploadBtn{
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  background:white;
+  color:#111;
+  border:0;
+  border-radius:12px;
+  padding:17px 10px;
+  font-size:18px;
+  font-weight:bold;
+}
+
+.uploadBtn:disabled{
+  background:#777;
+  color:white;
+}
+
+#photos{
+  display:none;
+}
+
+#status{
+  margin-top:18px;
+  padding:13px;
+  border-radius:10px;
+  background:#292929;
+  text-align:left;
+  line-height:1.5;
+  word-break:break-word;
+}
+
+.galleryBtn{
+  display:none;
+  margin-top:15px;
+  width:100%;
+  padding:14px;
+  border:0;
+  border-radius:10px;
+  background:#333;
+  color:white;
+  font-size:16px;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+<h2>RAMDEV PHOTOGRAPHY</h2>
+
+<div>Wedding Photo Upload</div>
+
+</header>
+
+
+<main>
+
+<div class="card">
+
+
+<input
+id="photos"
+type="file"
+accept="image/*"
+multiple
+>
+
+
+<button
+id="uploadBtn"
+class="uploadBtn"
+type="button"
+>
+
+📷 फोटो अपलोड करें
+
+</button>
+
+
+<div id="status">
+
+फोटो अपलोड करने के लिए ऊपर बटन दबाएँ।
+
+</div>
+
+
+<button
+id="galleryBtn"
+class="galleryBtn"
+type="button"
+>
+
+🖼️ Gallery खोलें
+
+</button>
+
+
+</div>
+
+</main>
+
+
+<script>
+
+
+/* SUPABASE */
+
+const SUPABASE_URL =
+"https://wxrwkvlcatryuopvwqjh.supabase.co";
+
+const BUCKET =
+"Wedding photo";
+
+const KEY =
+"sb_publishable_LSDKQCTKq4pWbFTbNeEPIg_cdDCN7HM";
+
+
+/* ELEMENTS */
+
+const input =
+document.getElementById("photos");
+
+const uploadBtn =
+document.getElementById("uploadBtn");
+
+const status =
+document.getElementById("status");
+
+const galleryBtn =
+document.getElementById("galleryBtn");
+
+
+/* BUTTON दबाने पर Gallery खोलना */
+
+uploadBtn.addEventListener(
+"click",
+function(){
+
+  input.click();
+
+});
+
+
+/* फोटो चुनते ही upload */
+
+input.addEventListener(
+"change",
+function(){
+
+  if(
+    input.files &&
+    input.files.length > 0
+  ){
+
+    uploadPhotos();
+
+  }
+
+});
+
+
+/* WATERMARK */
+
+async function makeWatermark(file){
+
+  const objectURL =
+  URL.createObjectURL(file);
+
+
+  try{
+
+    const img =
+    await new Promise(
+    function(resolve,reject){
+
+      const image =
+      new Image();
+
+
+      image.onload =
+      function(){
+
+        resolve(image);
+
+      };
+
+
+      image.onerror =
+      function(){
+
+        reject(
+          new Error(
+            "फोटो खुल नहीं पाई"
+          )
+        );
+
+      };
+
+
+      image.src =
+      objectURL;
+
+    });
+
+
+    const MAX = 1800;
+
+
+    let w =
+    img.naturalWidth;
+
+    let h =
+    img.naturalHeight;
+
+
+    if(w > MAX){
+
+      h =
+      Math.round(
+        h * MAX / w
+      );
+
+      w = MAX;
+
+    }
+
+
+    if(h > MAX){
+
+      w =
+      Math.round(
+        w * MAX / h
+      );
+
+      h = MAX;
+
+    }
+
+
+    const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+    canvas.width = w;
+    canvas.height = h;
+
+
+    const ctx =
+    canvas.getContext("2d");
+
+
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      w,
+      h
+    );
+
+
+    /* केवल ऊपर-दाएँ watermark */
+
+    const fontSize =
+    Math.max(
+      18,
+      Math.round(w / 70)
+    );
+
+
+    ctx.font =
+    "bold " +
+    fontSize +
+    "px Arial";
+
+
+    ctx.textAlign =
+    "right";
+
+
+    ctx.textBaseline =
+    "top";
+
+
+    ctx.fillStyle =
+    "rgba(255,255,255,.65)";
+
+
+    ctx.shadowColor =
+    "rgba(0,0,0,.4)";
+
+
+    ctx.shadowBlur = 3;
+
+
+    ctx.fillText(
+      "RAMDEV PHOTOGRAPHY",
+      w - 20,
+      15
+    );
+
+
+    const blob =
+    await new Promise(
+    function(resolve,reject){
+
+      canvas.toBlob(
+      function(result){
+
+        if(result){
+
+          resolve(result);
+
+        }else{
+
+          reject(
+            new Error(
+              "फोटो तैयार नहीं हो पाई"
+            )
+          );
+
+        }
+
+      },
+      "image/jpeg",
+      0.88
+      );
+
+    });
+
+
+    return blob;
+
+
+  }finally{
+
+    URL.revokeObjectURL(
+      objectURL
+    );
+
+  }
+
+}
+
+
+/* UPLOAD FUNCTION */
+
+async function uploadPhotos(){
+
+
+  const files =
+  Array.from(
+    input.files || []
+  );
+
+
+  if(!files.length){
+
+    status.innerHTML =
+    "❌ पहले फोटो चुनें।";
+
+    return;
+
+  }
+
+
+  uploadBtn.disabled =
+  true;
+
+
+  uploadBtn.textContent =
+  "⏳ Upload हो रहा है...";
+
+
+  let success = 0;
+
+  let failed = 0;
+
+  let lastError = "";
+
+
+  for(
+    let i = 0;
+    i < files.length;
+    i++
+  ){
+
+
+    const file =
+    files[i];
+
+
+    status.innerHTML =
+    "⏳ फोटो " +
+    (i + 1) +
+    " / " +
+    files.length +
+    " तैयार हो रही है...";
+
+
+    try{
+
+
+      /* watermark */
+
+      const blob =
+      await makeWatermark(file);
+
+
+      /* filename */
+
+      const baseName =
+      file.name
+      .replace(
+        /\.[^/.]+$/,
+        ""
+      )
+      .replace(
+        /[^\w\-]+/g,
+        "_"
+      );
+
+
+      const fileName =
+      Date.now() +
+      "-" +
+      Math.random()
+      .toString(36)
+      .substring(2,8) +
+      "-" +
+      baseName +
+      ".jpg";
+
+
+      /* Supabase upload URL */
+
+      const uploadURL =
+      SUPABASE_URL +
+      "/storage/v1/object/" +
+      encodeURIComponent(
+        BUCKET
+      ) +
+      "/" +
+      encodeURIComponent(
+        fileName
+      );
+
+
+      status.innerHTML =
+      "⬆️ फोटो " +
+      (i + 1) +
+      " / " +
+      files.length +
+      " upload हो रही है...";
+
+
+      /* UPLOAD */
+
+      const response =
+      await fetch(
+        uploadURL,
+        {
+
+          method:"POST",
+
+          headers:{
+
+            "apikey":
+            KEY,
+
+            "Authorization":
+            "Bearer " + KEY,
+
+            "Content-Type":
+            "image/jpeg",
+
+            "x-upsert":
+            "false"
+
+          },
+
+          body:blob
+
+        }
+      );
+
+
+      /* ERROR पढ़ना */
+
+      if(!response.ok){
+
+        const errorText =
+        await response.text();
+
+        throw new Error(
+          "HTTP " +
+          response.status +
+          ": " +
+          errorText
+        );
+
+      }
+
+
+      success++;
+
+
+      status.innerHTML =
+      "✅ फोटो " +
+      success +
+      " upload हो गई।";
+
+
+    }catch(error){
+
+
+      failed++;
+
+
+      lastError =
+      error.message ||
+      String(error);
+
+
+      console.error(
+        "UPLOAD ERROR:",
+        error
+      );
+
+
+      status.innerHTML =
+      "❌ फोटो upload नहीं हुई।<br><br>" +
+      "<b>Error:</b><br>" +
+      lastError;
+
+
+    }
+
+  }
+
+
+  /* FINAL RESULT */
+
+  if(failed === 0){
+
+    status.innerHTML =
+    "✅ <b>" +
+    success +
+    " फोटो Gallery में लग गई।</b>";
+
+
+    galleryBtn.style.display =
+    "block";
+
+
+  }else{
+
+
+    status.innerHTML =
+    "❌ <b>Upload में समस्या आई</b><br><br>" +
+
+    "सफल: " +
+    success +
+    "<br>" +
+
+    "असफल: " +
+    failed +
+    "<br><br>" +
+
+    "<b>असल Error:</b><br>" +
+
+    lastError;
+
+
+  }
+
+
+  uploadBtn.disabled =
+  false;
+
+
+  uploadBtn.textContent =
+  "📷 और फोटो अपलोड करें";
+
+
+  input.value = "";
+
+
+}
+
+
+/* GALLERY BUTTON */
+
+galleryBtn.addEventListener(
+"click",
+function(){
+
+  window.location.href =
+  "./index.html";
+
+});
+
+
+</script>
+
+
+</body>
+
+</html>
