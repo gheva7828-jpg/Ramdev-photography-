@@ -3,131 +3,189 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Ramdev Photography - Upload</title>
+
 <style>
-body{font-family:Arial;margin:0;background:#f5f5f5}
-header{background:#111;color:white;text-align:center;padding:18px}
-main{max-width:700px;margin:auto;padding:15px}
-.card{background:white;padding:18px;border-radius:14px;margin-top:15px}
-button{background:#111;color:white;border:0;border-radius:10px;padding:12px 18px;margin-top:12px}
-input{margin-top:12px;width:100%}
-#status{margin-top:15px;padding:10px;background:#eee;border-radius:8px}
+body{
+  font-family:Arial,sans-serif;
+  margin:0;
+  background:#f5f5f5;
+}
+
+header{
+  background:#111;
+  color:white;
+  text-align:center;
+  padding:18px;
+}
+
+main{
+  max-width:700px;
+  margin:auto;
+  padding:15px;
+}
+
+.card{
+  background:white;
+  padding:20px;
+  border-radius:14px;
+  margin-top:15px;
+  box-shadow:0 2px 8px #ddd;
+}
+
+input{
+  width:100%;
+  margin-top:15px;
+  font-size:16px;
+}
+
+button{
+  width:100%;
+  background:#111;
+  color:white;
+  border:0;
+  border-radius:10px;
+  padding:14px;
+  margin-top:18px;
+  font-size:16px;
+}
+
+button:disabled{
+  background:#777;
+}
+
+#status{
+  margin-top:15px;
+  padding:12px;
+  background:#eee;
+  border-radius:8px;
+  line-height:1.5;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-<h2>RAMDEV PHOTOGRAPHY</h2>
-<div>Photo Upload</div>
+  <h2>RAMDEV PHOTOGRAPHY</h2>
+  <div>Photo Upload</div>
 </header>
 
 <main>
+
 <div class="card">
+
 <h3>📷 Wedding Photos Upload</h3>
 
-<input id="photos" type="file" accept="image/*" multiple>
+<input
+  id="photos"
+  type="file"
+  accept="image/*"
+  multiple
+>
 
-<button onclick="uploadPhotos()">फोटो Upload करें</button>
+<button id="uploadBtn" type="button">
+  फोटो Upload करें
+</button>
 
-<div id="status">फोटो चुनें और Upload करें।</div>
+<div id="status">
+  पहले फोटो चुनें।
 </div>
+
+</div>
+
 </main>
 
 <script>
-const SUPABASE_URL="https://wxrwkvlcatryuopvwqjh.supabase.co";
-const BUCKET="Wedding photo";
-const KEY="sb_publishable_LSDKQCTKq4pWbFTbNeEPIg_cdDCN7HM";
+
+const SUPABASE_URL =
+"https://wxrwkvlcatryuopvwqjh.supabase.co";
+
+const BUCKET =
+"Wedding photo";
+
+const KEY =
+"sb_publishable_LSDKQCTKq4pWbFTbNeEPIg_cdDCN7HM";
+
+
+const input =
+document.getElementById("photos");
+
+const button =
+document.getElementById("uploadBtn");
+
+const status =
+document.getElementById("status");
+
+
+/* फोटो में ऊपर-दाएँ watermark लगाना */
 
 async function watermark(file){
 
- const img=await new Promise((resolve,reject)=>{
-   const x=new Image();
-   x.onload=()=>resolve(x);
-   x.onerror=reject;
-   x.src=URL.createObjectURL(file);
- });
+  const url = URL.createObjectURL(file);
 
- const max=2000;
- let w=img.width,h=img.height;
+  try{
 
- if(w>max){h=Math.round(h*max/w);w=max}
- if(h>max){w=Math.round(w*max/h);h=max}
+    const img = await new Promise((resolve,reject)=>{
 
- const c=document.createElement("canvas");
- c.width=w;c.height=h;
+      const image = new Image();
 
- const ctx=c.getContext("2d");
- ctx.drawImage(img,0,0,w,h);
+      image.onload = () => resolve(image);
 
- /* सिर्फ ऊपर-दाएँ watermark */
- ctx.fillStyle="rgba(255,255,255,.65)";
- ctx.font="bold 22px Arial";
- ctx.textAlign="right";
- ctx.fillText("RAMDEV PHOTOGRAPHY",w-20,35);
+      image.onerror = () =>
+        reject(new Error("फोटो खुल नहीं पाई।"));
 
- return new Promise(resolve=>{
-   c.toBlob(resolve,"image/jpeg",.88);
- });
-}
+      image.src = url;
 
-async function uploadPhotos(){
+    });
 
- const files=[...document.getElementById("photos").files];
 
- if(!files.length){
-   document.getElementById("status").textContent="पहले फोटो चुनें।";
-   return;
- }
+    const MAX = 1800;
 
- let done=0;
+    let w = img.naturalWidth;
+    let h = img.naturalHeight;
 
- for(const file of files){
 
-   document.getElementById("status").textContent=
-   "Photo "+(done+1)+" / "+files.length+" तैयार हो रही है...";
+    if(w > MAX){
 
-   try{
+      h = Math.round(h * MAX / w);
+      w = MAX;
 
-     const blob=await watermark(file);
+    }
 
-     const name=
-       Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+ 
-       file.name.replace(/\.[^/.]+$/,"").replace(/[^\w\-]+/g,"_")+
-       ".jpg";
+    if(h > MAX){
 
-     const url=
-       SUPABASE_URL+
-       "/storage/v1/object/"+
-       encodeURIComponent(BUCKET)+"/"+
-       encodeURIComponent(name);
+      w = Math.round(w * MAX / h);
+      h = MAX;
 
-     const r=await fetch(url,{
-       method:"POST",
-       headers:{
-         "apikey":KEY,
-         "Authorization":"Bearer "+KEY,
-         "Content-Type":"image/jpeg",
-         "x-upsert":"false"
-       },
-       body:blob
-     });
+    }
 
-     if(!r.ok) throw new Error(await r.text());
 
-     done++;
+    const canvas =
+      document.createElement("canvas");
 
-   }catch(e){
-     console.error(e);
-   }
- }
+    canvas.width = w;
+    canvas.height = h;
 
- document.getElementById("status").textContent=
- "✅ "+done+" फोटो successfully upload हो गई।";
 
- document.getElementById("photos").value="";
-}
-</script>
+    const ctx =
+      canvas.getContext("2d");
 
-</body>
-</html>
+    ctx.drawImage(img,0,0,w,h);
+
+
+    /* केवल एक watermark */
+
+    const fontSize =
+      Math.max(18,Math.round(w/65));
+
+    ctx.font =
+      "bold " + fontSize + "px Arial";
+
+    ctx.textAlign = "right";
+
+    ctx.textBaseline = "top";
+
+    ctx.fillStyle =
+      "rgba(255,255,255,0.
