@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -15,7 +16,7 @@ main{max-width:1000px;margin:auto;padding:15px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .photo{background:#292929;border-radius:10px;overflow:hidden}
 .photo img{width:100%;display:block;object-fit:contain}
-.photo button{width:100%;padding:12px;border:0;background:#333;color:white;font-size:15px}
+.photo a{display:block;text-align:center;padding:12px;background:#333;color:white;text-decoration:none;font-size:15px}
 @media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 </head>
@@ -24,17 +25,14 @@ main{max-width:1000px;margin:auto;padding:15px}
 <h2>RAMDEV PHOTOGRAPHY</h2>
 <p>Wedding Photo Gallery</p>
 </header>
-
 <main>
 <div id="status">फोटो लोड हो रही हैं...</div>
 <div id="gallery" class="grid"></div>
 </main>
-
 <script>
 const SUPABASE_URL="https://wxrwkvlcatryuopvwqjh.supabase.co";
 const BUCKET="Wedding photo";
 const KEY="sb_publishable_LSDKQCTKq4pWbFTbNeEPIg_cdDCN7HM";
-
 const statusBox=document.getElementById("status");
 const gallery=document.getElementById("gallery");
 
@@ -56,71 +54,39 @@ async function loadGallery(){
         })
       }
     );
-
-    if(!response.ok) throw new Error("फोटो लोड नहीं हुईं। HTTP "+response.status);
-
+    if(!response.ok)throw new Error("HTTP "+response.status);
     const files=await response.json();
-    const photos=files.filter(f=>f.name && /\.(jpg|jpeg|png|webp)$/i.test(f.name));
-
+    const photos=files.filter(f=>f.name&&/\.(jpg|jpeg|png|webp)$/i.test(f.name));
     if(!photos.length){
       statusBox.textContent="अभी Gallery में कोई फोटो नहीं है।";
       return;
     }
-
     statusBox.textContent="कुल "+photos.length+" फोटो उपलब्ध हैं।";
-
     photos.forEach(file=>{
-      const url=SUPABASE_URL+"/storage/v1/object/public/"+
-        encodeURIComponent(BUCKET)+"/"+
-        file.name.split("/").map(encodeURIComponent).join("/");
-
+      const path=file.name.split("/").map(encodeURIComponent).join("/");
+      const url=SUPABASE_URL+"/storage/v1/object/public/"+encodeURIComponent(BUCKET)+"/"+path;
+      const filename=file.name.split("/").pop();
       const card=document.createElement("div");
       card.className="photo";
-
       const img=document.createElement("img");
       img.src=url;
       img.alt="Ramdev Photography wedding photo";
       img.loading="lazy";
-
-      const btn=document.createElement("button");
-      btn.textContent="⬇ फोटो डाउनलोड करें";
-      btn.onclick=async()=>{
-        try{
-          const r=await fetch(url);
-          if(!r.ok) throw new Error();
-          const blob=await r.blob();
-          const link=document.createElement("a");
-          link.href=URL.createObjectURL(blob);
-          link.download=file.name.split("/").pop();
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          setTimeout(()=>URL.revokeObjectURL(link.href),2000);
-        }catch(e){
-          window.open(url,"_blank");
-        }
-      };
-
+      const link=document.createElement("a");
+      link.href=url+"?download="+encodeURIComponent(filename);
+      link.textContent="⬇ फोटो डाउनलोड करें";
+      link.setAttribute("download",filename);
+      link.setAttribute("target","_blank");
+      link.setAttribute("rel","noopener");
       card.appendChild(img);
-      card.appendChild(btn);
+      card.appendChild(link);
       gallery.appendChild(card);
     });
-
   }catch(error){
-    statusBox.textContent="त्रुटि: "+error.message;
+    statusBox.textContent="फोटो लोड नहीं हुईं: "+error.message;
   }
 }
-
 loadGallery();
 </script>
 </body>
 </html>
- 
-  
-
-
-      
-
-  
-
-  
